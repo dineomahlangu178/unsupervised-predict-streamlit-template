@@ -258,6 +258,10 @@ def main():
 #ratings.timestamp = pd.to_datetime(ratings.timestamp, unit='s')
         rating_m.timestamp = pd.to_datetime(rating_m.timestamp, infer_datetime_format=True)
         rating_m.timestamp = rating_m.timestamp.dt.year
+
+# Check and clean NaN values
+        print ("Number of movies Null values: ", max(movies.isnull().sum()))
+        print ("Number of ratings Null values: ", max(rating_m.isnull().sum()))
         movies.dropna(inplace=True)
         rating_m.dropna(inplace=True)
     
@@ -266,9 +270,9 @@ def main():
         rating_m.sort_values(by='movieId', inplace=True)
         movies.reset_index(inplace=True, drop=True)
         rating_m.reset_index(inplace=True, drop=True)
-        
-        # Let's work with a temp smaller slice 'dftmp' of the original dataframe to reduce runtime (ratings hass +2MM rows)
+# Let's work with a temp smaller slice 'dftmp' of the original dataframe to reduce runtime (ratings hass +2MM rows)
         dftmp = movies[['movieId', 'year']].groupby('year')
+
 
         if st.checkbox('Show Movies Production Over The Years Graph'):
             fig, ax1 = plt.subplots(figsize=(15,10))
@@ -286,6 +290,8 @@ def main():
             ax1.set_ylabel('Number of movies released'); ax2.set_ylabel('Number of ratings')
             plt.title('Movies per year')
             st.pyplot(fig)
+            st.write('Production of movies over the years has been increasing until 2019, and that might \
+                be because we are during the pandemic. That is why the production decreased.')
         
 
 
@@ -293,13 +299,14 @@ def main():
             dftmp = movies[['movieId', 'year']].set_index('movieId').join(
             rating_m[['movieId','rating']].groupby('movieId').mean())
 
-            plt.figure(figsize=(15,8))
-            plt.plot(dftmp.year, dftmp.rating,"g.", markersize=4)
-            plt.xlabel('Year')
-            plt.ylabel('Movie average rating')
+            fig, ax2=plt.subplots(figsize=(15,8))
+            ax2.plot(dftmp.year, dftmp.rating,"g.", markersize=4)
+            ax2.set_xlabel('Year')
+            ax2.set_ylabel('Movie average rating')
             plt.title('All movies rating')
-            plt.ylim(0,)
-            st.pyplot()
+            ax2.grid(None)
+            ax2.set_ylim(0,)
+            st.pyplot(fig)
         
 
         st.subheader("Insights of IMDB data set") 
@@ -309,7 +316,8 @@ def main():
                              columns=['movieId', 'title_cast'])
 
             # Split title_casts seperated by "|" and create a list containing the title_cast allocated to each movie
-            imdb_casts.title_cast = imdb_casts.title_cast.apply(lambda x: x.split('|'))
+            imdb_casts.title_cast = imdb_casts.title_cast.apply(lambda x: str(x).split('|'))
+
 
             # Create expanded dataframe where each movie-title_cast combination is in a seperate row
             imdb_casts = pd.DataFrame([(tup.movieId, d) for tup in imdb_casts.itertuples() for d in tup.title_cast],
@@ -329,7 +337,7 @@ def main():
                              columns=['movieId', 'plot_keywords'])
 
             # Split genres seperated by "|" and create a list containing the genres allocated to each movie
-            imdb_keywords.plot_keywords = imdb_keywords.plot_keywords.apply(lambda x: x.split('|'))
+            imdb_keywords.plot_keywords = imdb_keywords.plot_keywords.apply(lambda x: str(x).split('|'))
 
            # Create expanded dataframe where each movie-genre combination is in a seperate row
             imdb_keywords = pd.DataFrame([(tup.movieId, d) for tup in imdb_keywords.itertuples() for d in tup.plot_keywords],
@@ -352,35 +360,7 @@ def main():
             st.plotly_chart()
             
        
-        
-        if st.checkbox('Show WordClouts of keywords'):
-            imdb_keywords = imdb_keywords['plot_keywords'].copy()
-
-            # Join all the text in the list and remove apostrophes
-            all_gtags = ' '.join([text for text in imdb_keywords.astype(str)])
-            all_gtags = all_gtags.replace("'", "")
-
-            wordcloud = WordCloud(width=2000,height=1000, random_state=21, max_font_size=200, background_color=
-                      'white', min_word_length=3, max_words=20).generate(all_gtags)
-            plt.figure(facecolor = 'white', edgecolor='blue', dpi=600)
-            plt.imshow(wordcloud, interpolation='bilinear')
-            plt.axis("off")
-            st.pyplot
-    
-        if st.checkbox('Show WordClouts of Popular Cast'):    
-            # Copy imdb_casts title_cast column
-            imdb_casts = imdb_casts['title_cast'].copy()
-
-            # Join all the text in the list and remove apostrophes
-            imdb_casts = ' '.join([text for text in imdb_casts.astype(str)])
-            imdb_casts = imdb_casts.replace("'", "")
-
-            wordcloud = WordCloud(width=2000,height=1000, random_state=21, max_font_size=200, background_color=
-                      'white', min_word_length=1, max_words=50).generate(imdb_casts)
-            plt.figure(facecolor = 'white', edgecolor='blue', dpi=600)
-            plt.imshow(wordcloud, interpolation='bilinear')
-            plt.axis("off")
-            st.pyplot()
+       
 
 
 if __name__ == '__main__':
